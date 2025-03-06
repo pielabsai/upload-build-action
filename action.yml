@@ -37,14 +37,15 @@ runs:
     - name: Upload build to Pie
       shell: bash
       run: |
+        build_path="${{ steps.build_check.outputs.build_path }}"
 
-        if [ ! -f "${{ steps.build_check.outputs.build_path }}" ]; then
-          echo "Error: Build file not found at ${{ steps.build_check.outputs.build_path }}"
+        if [ ! -f "$build_path" ]; then
+          echo "Error: Build file not found at $build_path"
           exit 1
         fi
 
         # Check file extension
-        if [[ ! "${{ steps.build_check.outputs.build_path }}" =~ \.(apk|ipa|aab|zip)$ ]]; then
+        if [[ ! "$build_path" =~ \.(apk|ipa|aab|zip)$ ]]; then
           echo "Error: Build file must be an APK, IPA, AAB, or ZIP file"
           exit 1
         fi
@@ -52,7 +53,7 @@ runs:
         # Upload the build using curl with multipart form-data
         response=$(curl -X POST \
           -H "Authorization: Bearer ${{ inputs.pie_api_key }}" \
-          -F "file=@${{ steps.build_check.outputs.build_path }}" \
+          -F "file=@$build_path" \
           https://api.pie.inc/v1/app/builds)
 
         # Check if upload was successful
