@@ -7,7 +7,7 @@ inputs:
     description: "Pie API Key for authentication"
     required: true
   build_path:
-    description: "Path to the build file (APK, IPA, or AAB)"
+    description: "Path to the build file (APK, APP, or AAB)"
     required: true
 
 runs:
@@ -29,7 +29,6 @@ runs:
           fi
           echo "Created zip archive at $zip_path"
           echo "build_path=$zip_path" >> $GITHUB_OUTPUT
-          echo "::set-output name=build_path::$zip_path"
         else
           echo "build_path=${{ inputs.build_path }}" >> $GITHUB_OUTPUT
         fi
@@ -45,25 +44,32 @@ runs:
         fi
 
         # Check file extension
-        if [[ ! "$build_path" =~ \.(apk|ipa|aab|zip)$ ]]; then
-          echo "Error: Build file must be an APK, IPA, AAB, or ZIP file"
+        if [[ ! "$build_path" =~ \.(apk|app|aab|zip)$ ]]; then
+          echo "Error: Build file must be an APK, APP, AAB, or ZIP file"
           exit 1
         fi
 
         # Upload the build using curl with multipart form-data
-        response=$(curl -X POST \
+        http_code=$(curl -X POST \
           -H "X-API-Key: ${{ inputs.pie_api_key }}" \
           -F "file=@$build_path" \
+          -w "%{http_code}" \
+          -s  -o /dev/null \
           https://api.pie.inc/v1/app/builds)
 
-        # Check if upload was successful
+        # Check if curl command itself failed
         if [ $? -ne 0 ]; then
-          echo "Error: Failed to upload build to Pie API"
+          echo "Error: Failed to upload build to Pie API - curl command failed"
           exit 1
         fi
 
-        echo "Successfully uploaded build to Pie"
-        echo "Response: $response"
+        # Check for 201 Created status code
+        if [ "$http_code" != "201" ]; then
+          echo "Error: Failed to upload build to Pie API - received HTTP status code $http_code (expected 201 Created)"
+          exit 1
+        fi
+
+        echo "Successfully uploaded build to Pie (HTTP status code: 201 Created)"
 
 branding:
   icon: "upload-cloud"
