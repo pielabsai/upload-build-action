@@ -15,15 +15,33 @@ runs:
   steps:
     - name: Check build file exists
       shell: bash
+      id: build_check
       run: |
-        if [ ! -f "${{ inputs.build_path }}" ]; then
-          echo "Error: Build file not found at ${{ inputs.build_path }}"
+        if [ -d "${{ inputs.build_path }}" ]; then
+          echo "Directory detected, creating zip archive..."
+          dir_name=$(basename "${{ inputs.build_path }}")
+          zip_path="${{ inputs.build_path }}.zip"
+          cd $(dirname "${{ inputs.build_path }}")
+          zip -r "$zip_path" "$dir_name"
+          if [ $? -ne 0 ]; then
+            echo "Error: Failed to create zip archive"
+            exit 1
+          fi
+          echo "Created zip archive at $zip_path"
+          echo "build_path=$zip_path" >> $GITHUB_OUTPUT
+        else
+          echo "build_path=${{ inputs.build_path }}" >> $GITHUB_OUTPUT
+        fi
+
+        BUILD_PATH=$(cat $GITHUB_OUTPUT | grep build_path | cut -d= -f2)
+        if [ ! -f "$BUILD_PATH" ]; then
+          echo "Error: Build file not found at $BUILD_PATH"
           exit 1
         fi
 
         # Check file extension
-        if [[ ! "${{ inputs.build_path }}" =~ \.(apk|ipa|aab)$ ]]; then
-          echo "Error: Build file must be an APK, IPA, or AAB file"
+        if [[ ! "$BUILD_PATH" =~ \.(apk|ipa|aab|zip)$ ]]; then
+          echo "Error: Build file must be an APK, IPA, AAB, or ZIP file"
           exit 1
         fi
 
@@ -33,7 +51,7 @@ runs:
         # Upload the build using curl with multipart form-data
         response=$(curl -X POST \
           -H "Authorization: Bearer ${{ inputs.pie_api_key }}" \
-          -F "file=@${{ inputs.build_path }}" \
+          -F "file=@${{ steps.build_check.outputs.build_path }}" \
           https://api.pie.inc/v1/app/builds)
 
         # Check if upload was successful
