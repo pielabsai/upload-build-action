@@ -52,7 +52,7 @@ runs:
 
         # Upload the build using curl with multipart form-data
         response=$(curl -X POST \
-          -H "Authorization: Bearer ${{ inputs.pie_api_key }}" \
+          -H "X-API-Key: ${{ inputs.pie_api_key }}" \
           -F "file=@$build_path" \
           https://api.pie.inc/v1/app/builds)
 
