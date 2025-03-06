@@ -1,0 +1,50 @@
+name: "Pie Build Uploader"
+description: "Upload iOS/Android simulator builds to Pie"
+author: "Pie"
+
+inputs:
+  pie_api_key:
+    description: "Pie API Key for authentication"
+    required: true
+  build_path:
+    description: "Path to the build file (APK, IPA, or AAB)"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check build file exists
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.build_path }}" ]; then
+          echo "Error: Build file not found at ${{ inputs.build_path }}"
+          exit 1
+        fi
+
+        # Check file extension
+        if [[ ! "${{ inputs.build_path }}" =~ \.(apk|ipa|aab)$ ]]; then
+          echo "Error: Build file must be an APK, IPA, or AAB file"
+          exit 1
+        fi
+
+    - name: Upload build to Pie
+      shell: bash
+      run: |
+        # Upload the build using curl with multipart form-data
+        response=$(curl -X POST \
+          -H "Authorization: Bearer ${{ inputs.pie_api_key }}" \
+          -F "file=@${{ inputs.build_path }}" \
+          https://api.pie.inc/v1/app/builds)
+
+        # Check if upload was successful
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to upload build to Pie API"
+          exit 1
+        fi
+
+        echo "Successfully uploaded build to Pie"
+        echo "Response: $response"
+
+branding:
+  icon: "upload-cloud"
+  color: "green"
