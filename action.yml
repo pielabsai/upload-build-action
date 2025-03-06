@@ -32,8 +32,11 @@ runs:
           echo "::set-output name=build_path::$zip_path"
         else
           echo "build_path=${{ inputs.build_path }}" >> $GITHUB_OUTPUT
-          echo "::set-output name=build_path::${{ inputs.build_path }}"
         fi
+
+    - name: Upload build to Pie
+      shell: bash
+      run: |
 
         if [ ! -f "${{ steps.build_check.outputs.build_path }}" ]; then
           echo "Error: Build file not found at ${{ steps.build_check.outputs.build_path }}"
@@ -41,14 +44,11 @@ runs:
         fi
 
         # Check file extension
-        if [[ ! "$BUILD_PATH" =~ \.(apk|ipa|aab|zip)$ ]]; then
+        if [[ ! "${{ steps.build_check.outputs.build_path }}" =~ \.(apk|ipa|aab|zip)$ ]]; then
           echo "Error: Build file must be an APK, IPA, AAB, or ZIP file"
           exit 1
         fi
 
-    - name: Upload build to Pie
-      shell: bash
-      run: |
         # Upload the build using curl with multipart form-data
         response=$(curl -X POST \
           -H "Authorization: Bearer ${{ inputs.pie_api_key }}" \
