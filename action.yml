@@ -21,7 +21,7 @@ runs:
           echo "Directory detected, creating zip archive..."
           dir_name=$(basename "${{ inputs.build_path }}")
           zip_path="${{ inputs.build_path }}.zip"
-          cd $(dirname "${{ inputs.build_path }}")
+          cd "$(dirname "${{ inputs.build_path }}")"
           zip -r "$zip_path" "$dir_name"
           if [ $? -ne 0 ]; then
             echo "Error: Failed to create zip archive"
