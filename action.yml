@@ -29,13 +29,14 @@ runs:
           fi
           echo "Created zip archive at $zip_path"
           echo "build_path=$zip_path" >> $GITHUB_OUTPUT
+          echo "::set-output name=build_path::$zip_path"
         else
           echo "build_path=${{ inputs.build_path }}" >> $GITHUB_OUTPUT
+          echo "::set-output name=build_path::${{ inputs.build_path }}"
         fi
 
-        BUILD_PATH=$(cat $GITHUB_OUTPUT | grep build_path | cut -d= -f2)
-        if [ ! -f "$BUILD_PATH" ]; then
-          echo "Error: Build file not found at $BUILD_PATH"
+        if [ ! -f "${{ steps.build_check.outputs.build_path }}" ]; then
+          echo "Error: Build file not found at ${{ steps.build_check.outputs.build_path }}"
           exit 1
         fi
 
