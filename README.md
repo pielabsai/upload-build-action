@@ -205,12 +205,6 @@ jobs:
 3. **Manual triggers**: Helpful for ad-hoc testing or when you need control over when builds are uploaded
 4. **PR-based uploads**: Good for testing builds before merging into main branches
 
-Remember to:
-- Set appropriate retention policies for your builds in Pie
-- Consider your API usage limits when setting up scheduled triggers
-- Use conditional jobs to avoid unnecessary builds and uploads
-- Add appropriate timeout limits for your workflows
-
 ## Error Handling
 
 The action includes built-in error handling for common scenarios:
