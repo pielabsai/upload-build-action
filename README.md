@@ -61,7 +61,7 @@ jobs:
       # Your iOS build steps here
       
       - name: Upload to Pie
-        uses: pie-inc/actions@v1  # Replace with actual repository/version
+        uses: pielabsai/upload-build-action@v1
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: build/MyApp.app
@@ -84,7 +84,7 @@ jobs:
       # Your Android build steps here
       
       - name: Upload to Pie
-        uses: pie-inc/actions@v1  # Replace with actual repository/version
+        uses: pielabsai/upload-build-action@v1
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: app/build/outputs/apk/release/app-release.apk
@@ -93,7 +93,7 @@ jobs:
 ## Directory Upload Example
 ```yaml
 - name: Upload Build Directory
-  uses: pie-inc/actions@v1  # Replace with actual repository/version
+  uses:pielabsai/upload-build-action@v1
   with:
     pie_api_key: ${{ secrets.PIE_API_KEY }}
     build_path: build/artifacts  # Directory will be automatically zipped
