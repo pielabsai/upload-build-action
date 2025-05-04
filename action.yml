@@ -99,8 +99,7 @@ runs:
           exit 1
         fi
 
-        # Extract HTTP status code from verbose output
-        http_code=$(echo "$http_code" | grep -o 'HTTP/[0-9.]* [0-9]*' | awk '{print $2}')
+        # HTTP status code is already captured directly by curl
 
         # Check for 201 Created status code
         if [ "$http_code" != "201" ]; then
