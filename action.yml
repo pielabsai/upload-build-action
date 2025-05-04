@@ -40,7 +40,7 @@ runs:
           cd "$parent_dir"
           
           # Create zip with verbose output
-          zip -r -v "$zip_path" "$dir_name"
+          zip -r "$zip_path" "$dir_name"
           if [ $? -ne 0 ]; then
             echo "Error: Failed to create zip archive"
             exit 1
