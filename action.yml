@@ -84,13 +84,20 @@ runs:
 
         # Upload the build using curl with verbose output
         echo "Uploading build to Pie API..."
-        http_code=$(curl -X POST \
+        response=$(curl -X POST \
           -H "X-API-Key: ${{ inputs.pie_api_key }}" \
           -F "file=@$build_path" \
-          -w "%{http_code}" \
+          -w "\nHTTP_STATUS:%{http_code}" \
           $( [ "${DEBUG}" = "true" ] && echo "-v" ) \
-          -o /dev/null \
           https://api.pie.inc/v1/app/builds 2>&1)
+
+        # Extract the HTTP status code from the response
+        http_code=$(echo "$response" | grep "HTTP_STATUS:" | cut -d':' -f2)
+
+        # Log the response for debugging
+        echo "Response from Pie API:"
+        echo "$response"
+        echo "HTTP status code: $http_code"
 
         # Check if curl command itself failed
         if [ $? -ne 0 ]; then
