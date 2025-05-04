@@ -88,7 +88,7 @@ runs:
           -H "X-API-Key: ${{ inputs.pie_api_key }}" \
           -F "file=@$build_path" \
           -w "%{http_code}" \
-          -v \
+          $( [ "${DEBUG}" = "true" ] && echo "-v" ) \
           -o /dev/null \
           https://api.pie.inc/v1/app/builds 2>&1)
 
