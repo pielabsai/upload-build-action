@@ -22,7 +22,7 @@ To use this action in your GitHub workflow, add the following step to your `.git
 
 ```yaml
 - name: Upload Build to Pie
-  uses: pielabsai/upload-build-action@v1  # Replace with actual repository/version
+  uses: pielabsai/upload-build-action@v1.2  # Replace with actual repository/version
   with:
     pie_api_key: ${{ secrets.PIE_API_KEY }}
     build_path: path/to/your/build.app  # or .apk, .aab
@@ -61,7 +61,7 @@ jobs:
       # Your iOS build steps here
       
       - name: Upload to Pie
-        uses: pielabsai/upload-build-action@v1
+        uses: pielabsai/upload-build-action@v1.2
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: build/MyApp.app
@@ -84,7 +84,7 @@ jobs:
       # Your Android build steps here
       
       - name: Upload to Pie
-        uses: pielabsai/upload-build-action@v1
+        uses: pielabsai/upload-build-action@v1.2
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: app/build/outputs/apk/release/app-release.apk
@@ -93,7 +93,7 @@ jobs:
 ## Directory Upload Example
 ```yaml
 - name: Upload Build Directory
-  uses:pielabsai/upload-build-action@v1
+  uses:pielabsai/upload-build-action@v1.2
   with:
     pie_api_key: ${{ secrets.PIE_API_KEY }}
     build_path: build/artifacts  # Directory will be automatically zipped
@@ -121,7 +121,7 @@ jobs:
       - uses: actions/checkout@v2
       # Build steps here
       - name: Upload to Pie
-        uses: pielabsai/upload-build-action@v1
+        uses: pielabsai/upload-build-action@v1.2
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: path/to/your/build.app
@@ -144,7 +144,7 @@ jobs:
       - uses: actions/checkout@v2
       # Build steps here
       - name: Upload to Pie
-        uses: pielabsai/upload-build-action@v1
+        uses: pielabsai/upload-build-action@v1.2
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: path/to/your/build.app
@@ -168,7 +168,7 @@ jobs:
       - uses: actions/checkout@v2
       # Build steps here
       - name: Upload to Pie
-        uses: pielabsai/upload-build-action@v1
+        uses: pielabsai/upload-build-action@v1.2
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: ${{ github.event.inputs.build_type == 'ios' && 'path/to/ios/build.app' || 'path/to/android/build.apk' }}
@@ -192,7 +192,7 @@ jobs:
       - uses: actions/checkout@v2
       # Build steps here
       - name: Upload to Pie
-        uses: pielabsai/upload-build-action@v1
+        uses: pielabsai/upload-build-action@v1.2
         with:
           pie_api_key: ${{ secrets.PIE_API_KEY }}
           build_path: path/to/your/build.app
