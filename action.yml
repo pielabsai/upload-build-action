@@ -7,7 +7,7 @@ inputs:
     description: "Pie API Key for authentication"
     required: true
   build_path:
-    description: "Path to the build file (APK, APP, or AAB)"
+    description: "Path to the build file (APK, APP, AAB, or ZIP)"
     required: true
 
 runs:
@@ -17,19 +17,49 @@ runs:
       shell: bash
       id: build_check
       run: |
+        # Check if path exists
+        if [ ! -e "${{ inputs.build_path }}" ]; then
+          echo "Error: Path does not exist: ${{ inputs.build_path }}"
+          exit 1
+        fi
+
+        # Handle directory case
         if [ -d "${{ inputs.build_path }}" ]; then
           echo "Directory detected, creating zip archive..."
-          dir_name=$(basename "${{ inputs.build_path }}")
-          zip_path="${{ inputs.build_path }}.zip"
-          cd "$(dirname "${{ inputs.build_path }}")"
+          
+          # Get absolute paths
+          abs_build_path=$(realpath "${{ inputs.build_path }}")
+          dir_name=$(basename "$abs_build_path")
+          parent_dir=$(dirname "$abs_build_path")
+          zip_path="$parent_dir/$dir_name.zip"
+          
+          echo "Source directory: $abs_build_path"
+          echo "Creating zip at: $zip_path"
+          
+          # Ensure we're in the parent directory
+          cd "$parent_dir"
+          
+          # Create zip with verbose output
           zip -r "$zip_path" "$dir_name"
           if [ $? -ne 0 ]; then
             echo "Error: Failed to create zip archive"
             exit 1
           fi
+          
+          # Verify zip was created
+          if [ ! -f "$zip_path" ]; then
+            echo "Error: Zip archive was not created at $zip_path"
+            exit 1
+          fi
+          
           echo "Created zip archive at $zip_path"
           echo "build_path=$zip_path" >> $GITHUB_OUTPUT
         else
+          # Handle file case
+          if [ ! -f "${{ inputs.build_path }}" ]; then
+            echo "Error: Path exists but is not a file: ${{ inputs.build_path }}"
+            exit 1
+          fi
           echo "build_path=${{ inputs.build_path }}" >> $GITHUB_OUTPUT
         fi
 
@@ -37,35 +67,51 @@ runs:
       shell: bash
       run: |
         build_path="${{ steps.build_check.outputs.build_path }}"
+        echo "Using build path: $build_path"
 
-        if [ ! -f "$build_path" ]; then
-          echo "Error: Build file not found at $build_path"
+        # Verify file exists and is readable
+        if [ ! -f "$build_path" ] || [ ! -r "$build_path" ]; then
+          echo "Error: Build file not found or not readable at $build_path"
           exit 1
         fi
 
-        # Check file extension
-        if [[ ! "$build_path" =~ \.(apk|app|aab|zip)$ ]]; then
+        # Check file extension (case insensitive)
+        if [[ ! "$(echo "$build_path" | tr '[:upper:]' '[:lower:]')" =~ \.(apk|app|aab|zip)$ ]]; then
           echo "Error: Build file must be an APK, APP, AAB, or ZIP file"
+          echo "Current file: $build_path"
           exit 1
         fi
 
-        # Upload the build using curl with multipart form-data
-        http_code=$(curl -X POST \
+        # Upload the build using curl with verbose output
+        echo "Uploading build to Pie API..."
+        response=$(curl -X POST \
           -H "X-API-Key: ${{ inputs.pie_api_key }}" \
           -F "file=@$build_path" \
-          -w "%{http_code}" \
-          -s  -o /dev/null \
-          https://api.pie.inc/v1/app/builds)
+          -w "\nHTTP_STATUS:%{http_code}" \
+          $( [ "${DEBUG}" = "true" ] && echo "-v" ) \
+          https://api.pie.inc/v1/app/builds 2>&1)
+
+        # Extract the HTTP status code from the response
+        http_code=$(echo "$response" | grep "HTTP_STATUS:" | cut -d':' -f2)
+
+        # Log the response for debugging
+        echo "Response from Pie API:"
+        echo "$response"
+        echo "HTTP status code: $http_code"
 
         # Check if curl command itself failed
         if [ $? -ne 0 ]; then
           echo "Error: Failed to upload build to Pie API - curl command failed"
+          echo "Curl output: $http_code"
           exit 1
         fi
+
+        # HTTP status code is already captured directly by curl
 
         # Check for 201 Created status code
         if [ "$http_code" != "201" ]; then
           echo "Error: Failed to upload build to Pie API - received HTTP status code $http_code (expected 201 Created)"
+          echo "Full curl output: $http_code"
           exit 1
         fi
 
