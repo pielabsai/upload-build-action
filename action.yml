@@ -10,6 +10,11 @@ inputs:
     description: "Path to the build file (APK, APP, AAB, or ZIP)"
     required: true
 
+outputs:
+  build_id:
+    description: "The buildID returned by the Pie API. Pass this to subsequent steps (e.g. the run_tests_on_target MCP tool) to identify the uploaded build."
+    value: ${{ steps.upload.outputs.build_id }}
+
 runs:
   using: "composite"
   steps:
@@ -64,6 +69,7 @@ runs:
         fi
 
     - name: Upload build to Pie
+      id: upload
       shell: bash
       run: |
         build_path="${{ steps.build_check.outputs.build_path }}"
@@ -82,40 +88,50 @@ runs:
           exit 1
         fi
 
-        # Upload the build using curl with verbose output
+        # Upload the build. Write the response body to a temp file and capture
+        # the HTTP status separately so we can parse the JSON cleanly without
+        # log noise interleaving (the old `curl ... 2>&1` mashed everything
+        # together, making JSON parsing impossible).
         echo "Uploading build to Pie API..."
-        response=$(curl -X POST \
-          -H "X-API-Key: ${{ inputs.pie_api_key }}" \
-          -F "file=@$build_path" \
-          -w "\nHTTP_STATUS:%{http_code}" \
-          $( [ "${DEBUG}" = "true" ] && echo "-v" ) \
-          https://api.pie.inc/v1/app/builds 2>&1)
+        response_file=$(mktemp)
+        trap 'rm -f "$response_file"' EXIT
 
-        # Extract the HTTP status code from the response
-        http_code=$(echo "$response" | grep "HTTP_STATUS:" | cut -d':' -f2)
+        curl_opts=(-sS -X POST
+          -H "X-API-Key: ${{ inputs.pie_api_key }}"
+          -F "file=@$build_path"
+          -o "$response_file"
+          -w "%{http_code}")
+        if [ "${DEBUG}" = "true" ]; then curl_opts+=(-v); fi
 
-        # Log the response for debugging
+        http_code=$(curl "${curl_opts[@]}" https://api.pie.inc/v1/app/builds)
+        curl_exit=$?
+
         echo "Response from Pie API:"
-        echo "$response"
+        cat "$response_file"
+        echo ""
         echo "HTTP status code: $http_code"
 
-        # Check if curl command itself failed
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to upload build to Pie API - curl command failed"
-          echo "Curl output: $http_code"
+        if [ $curl_exit -ne 0 ]; then
+          echo "Error: curl failed with exit code $curl_exit"
           exit 1
         fi
 
-        # HTTP status code is already captured directly by curl
-
-        # Check for 201 Created status code
         if [ "$http_code" != "201" ]; then
-          echo "Error: Failed to upload build to Pie API - received HTTP status code $http_code (expected 201 Created)"
-          echo "Full curl output: $http_code"
+          echo "Error: Failed to upload build - HTTP $http_code (expected 201 Created)"
           exit 1
         fi
 
-        echo "Successfully uploaded build to Pie (HTTP status code: 201 Created)"
+        # Extract the buildID from the JSON response. The api returns
+        # { success, status, message, data: { buildID, downloadUrl, ... } }.
+        # jq is preinstalled on all GitHub-hosted runners (ubuntu/macos).
+        build_id=$(jq -r '.data.buildID // empty' < "$response_file")
+        if [ -z "$build_id" ]; then
+          echo "Error: upload succeeded but response had no .data.buildID — refusing to emit empty output"
+          exit 1
+        fi
+
+        echo "Successfully uploaded build to Pie. buildID=$build_id"
+        echo "build_id=$build_id" >> "$GITHUB_OUTPUT"
 
 branding:
   icon: "upload-cloud"
