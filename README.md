@@ -35,6 +35,37 @@ To use this action in your GitHub workflow, add the following step to your `.git
 | `pie_api_key` | Your Pie API key for authentication. Should be stored as a GitHub secret. | Yes |
 | `build_path` | Path to your build file (APP, APK, or AAB) or directory. If a directory is provided, it will be automatically zipped. | Yes |
 
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `build_id` | The `buildID` returned by the Pie API. Pass this to subsequent steps (e.g. when calling the `run_tests_on_target` MCP tool or `POST /v1/runs/custom`) to identify the build you just uploaded. |
+
+### Using the `build_id` output
+
+```yaml
+- name: Upload build
+  id: pie_upload
+  uses: pielabsai/upload-build-action@v1.3
+  with:
+    pie_api_key: ${{ secrets.PIE_API_KEY }}
+    build_path: build/MyApp.app
+
+- name: Kick off tests against the new build
+  env:
+    PIE_API_KEY: ${{ secrets.PIE_API_KEY }}
+    BUILD_ID: ${{ steps.pie_upload.outputs.build_id }}
+  run: |
+    curl -X POST https://api.pie.inc/v1/runs/custom \
+      -H "X-API-Key: $PIE_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"buildID\": \"$BUILD_ID\",
+        \"existingTCIDs\": [368930, 488349],
+        \"newTCPrompts\": [\"Smoke test the login flow on the new build\"]
+      }"
+```
+
 ## Supported File Types
 
 - `.app` - iOS application builds
