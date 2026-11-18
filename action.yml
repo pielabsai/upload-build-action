@@ -9,6 +9,18 @@ inputs:
   build_path:
     description: "Path to an APK, iOS Simulator APP, or ZIP containing a supported build"
     required: true
+  pr_number:
+    description: "Pull request number. When set, Pie tests this build on that pull request and comments the results there. Leave empty for a regular upload."
+    required: false
+    default: ""
+  commit_sha:
+    description: "Full commit SHA the build was made from. Used only with pr_number; must be the pull request's head commit."
+    required: false
+    default: ${{ github.event.pull_request.head.sha || github.sha }}
+  repository:
+    description: "GitHub repository (owner/name) of the pull request. Used only with pr_number."
+    required: false
+    default: ${{ github.repository }}
 
 outputs:
   build_id:
@@ -113,7 +125,24 @@ runs:
           -w "%{http_code}")
         if [ "${DEBUG}" = "true" ]; then curl_opts+=(-v); fi
 
-        http_code=$(curl "${curl_opts[@]}" https://api.pie.inc/v1/app/builds)
+        # A pull request number turns this into a PR build: Pie tests it on
+        # that pull request. Re-uploading the same PR and commit returns the
+        # existing build with HTTP 200 and starts no second run.
+        upload_url=https://api.pie.inc/v1/app/builds
+        accepted_codes=" 201 "
+        pr_number="${{ inputs.pr_number }}"
+        if [ -n "$pr_number" ]; then
+          upload_url=https://api.pie.inc/v1/app/builds/code-review
+          accepted_codes=" 201 200 "
+          curl_opts+=(--form-string "provider=github"
+            --form-string "repository=${{ inputs.repository }}"
+            --form-string "changeNumber=$pr_number"
+            --form-string "commitSHA=${{ inputs.commit_sha }}")
+          if [ -n "${GITHUB_RUN_ID:-}" ]; then curl_opts+=(--form-string "pipelineID=$GITHUB_RUN_ID"); fi
+          echo "Uploading as a build for pull request #$pr_number at ${{ inputs.commit_sha }}"
+        fi
+
+        http_code=$(curl "${curl_opts[@]}" "$upload_url")
         curl_exit=$?
 
         echo "Response from Pie API:"
@@ -126,8 +155,8 @@ runs:
           exit 1
         fi
 
-        if [ "$http_code" != "201" ]; then
-          echo "Error: Failed to upload build - HTTP $http_code (expected 201 Created)"
+        if [[ "$accepted_codes" != *" $http_code "* ]]; then
+          echo "Error: Failed to upload build - HTTP $http_code (expected${accepted_codes% })"
           exit 1
         fi
 
