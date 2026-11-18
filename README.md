@@ -34,6 +34,9 @@ To use this action in your GitHub workflow, add the following step to your `.git
 |-------|-------------|----------|
 | `pie_api_key` | Your Pie API key for authentication. Should be stored as a GitHub secret. | Yes |
 | `build_path` | Path to your iOS Simulator APP, Android APK, or ZIP containing a supported build. APP directories are automatically zipped. | Yes |
+| `pr_number` | Pull request number. When set, Pie tests this build on that pull request and comments the results there. See [Test a pull request's build](#test-a-pull-requests-build). | No |
+| `commit_sha` | Full commit SHA the build was made from. Used only with `pr_number`. Defaults to the pull request's head commit, or the workflow's commit for manual runs. | No |
+| `repository` | `owner/name` of the pull request's repository. Used only with `pr_number`. Defaults to the current repository. | No |
 
 ## Outputs
 
@@ -65,6 +68,48 @@ To use this action in your GitHub workflow, add the following step to your `.git
         \"newTCPrompts\": [\"Smoke test the login flow on the new build\"]
       }"
 ```
+
+## Test a pull request's build
+
+Pass `pr_number` and Pie tests that exact build on the pull request, then comments on it with the tests it ran, their results and videos. Pull requests that don't upload a build get no run and no comment, so you choose which pull requests Pie tests.
+
+Before you start, ask Pie to connect your Pie app to the repository with pull request testing on. Automatic runs on every pull request stay off unless you ask for them.
+
+This workflow runs only when someone adds the `pie-test` label to a pull request, or starts it by hand from the Actions tab:
+
+```yaml
+name: Pie PR test
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to test
+        required: true
+
+jobs:
+  pie:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'pie-test'
+    runs-on: macos-latest  # ubuntu-latest is enough for Android
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build an iOS Simulator .app or an Android debug .apk here
+
+      - name: Send the PR build to Pie
+        uses: pielabsai/upload-build-action@v1.5
+        with:
+          pie_api_key: ${{ secrets.PIE_API_KEY }}
+          build_path: build/Build/Products/Debug-iphonesimulator/MyApp.app  # or app/build/outputs/apk/debug/app-debug.apk
+          pr_number: ${{ github.event.pull_request.number || inputs.pr_number }}
+```
+
+Things to know:
+
+- **Manual runs:** in "Run workflow", pick the pull request's branch. The build and `commit_sha` come from that branch, and Pie checks the commit is the pull request's latest.
+- **Testing again:** Pie runs once per pull request and commit. Uploading the same commit again succeeds and returns the same `build_id` without a second run. Push a new commit, then remove and re-add the label.
+- **Forks:** GitHub does not give secrets to workflows from forked pull requests, so this works for branches in your own repository.
 
 ## Supported File Types
 
