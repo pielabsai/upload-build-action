@@ -7,7 +7,7 @@ inputs:
     description: "Pie API Key for authentication"
     required: true
   build_path:
-    description: "Path to the build file (APK, APP, AAB, or ZIP)"
+    description: "Path to an APK, iOS Simulator APP, or ZIP containing a supported build"
     required: true
 
 outputs:
@@ -25,6 +25,12 @@ runs:
         # Check if path exists
         if [ ! -e "${{ inputs.build_path }}" ]; then
           echo "Error: Path does not exist: ${{ inputs.build_path }}"
+          exit 1
+        fi
+
+        # Reject bundles before packaging or uploading anything.
+        if [[ "$(echo "${{ inputs.build_path }}" | tr '[:upper:]' '[:lower:]')" == *.aab ]]; then
+          echo "Error: Android App Bundles (.aab) are unsupported. Upload an .apk instead."
           exit 1
         fi
 
@@ -82,8 +88,8 @@ runs:
         fi
 
         # Check file extension (case insensitive)
-        if [[ ! "$(echo "$build_path" | tr '[:upper:]' '[:lower:]')" =~ \.(apk|app|aab|zip)$ ]]; then
-          echo "Error: Build file must be an APK, APP, AAB, or ZIP file"
+        if [[ ! "$(echo "$build_path" | tr '[:upper:]' '[:lower:]')" =~ \.(apk|app|zip)$ ]]; then
+          echo "Error: Build file must be an APK, iOS Simulator APP, or ZIP containing a supported build"
           echo "Current file: $build_path"
           exit 1
         fi

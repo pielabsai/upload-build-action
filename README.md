@@ -1,10 +1,10 @@
 # Pie Build Uploader GitHub Action
 
-This GitHub Action automates the process of uploading iOS and Android app builds (APP, APK, AAB) to Pie's platform. It supports single file uploads as well as directory uploads (which will be automatically zipped).
+This GitHub Action uploads iOS Simulator APP and Android APK builds to Pie. It supports single file uploads as well as directory uploads (which will be automatically zipped). Android App Bundles (`.aab`) are unsupported; upload an `.apk` instead.
 
 ## Features
 
-- Supports iOS (APP) and Android (APK, AAB) build files
+- Supports iOS Simulator (APP) and Android (APK) build files
 - Automatic ZIP creation for directory uploads
 - Secure API key authentication
 - Built-in file validation and error handling
@@ -25,7 +25,7 @@ To use this action in your GitHub workflow, add the following step to your `.git
   uses: pielabsai/upload-build-action@v1.2  # Replace with actual repository/version
   with:
     pie_api_key: ${{ secrets.PIE_API_KEY }}
-    build_path: path/to/your/build.app  # or .apk, .aab
+    build_path: path/to/your/build.app  # or .apk
 ```
 
 ## Inputs
@@ -33,7 +33,7 @@ To use this action in your GitHub workflow, add the following step to your `.git
 | Input | Description | Required |
 |-------|-------------|----------|
 | `pie_api_key` | Your Pie API key for authentication. Should be stored as a GitHub secret. | Yes |
-| `build_path` | Path to your build file (APP, APK, or AAB) or directory. If a directory is provided, it will be automatically zipped. | Yes |
+| `build_path` | Path to your iOS Simulator APP, Android APK, or ZIP containing a supported build. APP directories are automatically zipped. | Yes |
 
 ## Outputs
 
@@ -68,10 +68,11 @@ To use this action in your GitHub workflow, add the following step to your `.git
 
 ## Supported File Types
 
-- `.app` - iOS application builds
+- `.app` - iOS Simulator application builds
 - `.apk` - Android application builds
-- `.aab` - Android App Bundle
-- `.zip` - Automatically created for directory uploads
+- `.zip` - An APK or iOS Simulator `.app` at the archive root; automatically created for directory uploads
+
+An `.aab` filename is rejected before upload, including uppercase extensions. Renaming or wrapping a bundle in a ZIP does not make it a supported build. A ZIP upload is checked asynchronously by Pie; a successful upload response does not mean the build passed verification.
 
 ## Example Workflows
 
@@ -127,7 +128,7 @@ jobs:
   uses:pielabsai/upload-build-action@v1.2
   with:
     pie_api_key: ${{ secrets.PIE_API_KEY }}
-    build_path: build/artifacts  # Directory will be automatically zipped
+    build_path: build/MyApp.app  # APP directory will be at the ZIP root
 ```
 
 ## Trigger Strategies
