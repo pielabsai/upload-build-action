@@ -1,11 +1,11 @@
 # Pie Build Uploader GitHub Action
 
-This GitHub Action uploads iOS Simulator APP and Android APK builds to Pie. It supports single file uploads as well as directory uploads (which will be automatically zipped). Android App Bundles (`.aab`) are unsupported; upload an `.apk` instead.
+This GitHub Action uploads iOS Simulator APP and Android APK builds to Pie. It supports single file uploads as well as iOS Simulator `.app` directory uploads (which will be automatically zipped). Android App Bundles (`.aab`) are unsupported; upload an `.apk` instead.
 
 ## Features
 
 - Supports iOS Simulator (APP) and Android (APK) build files
-- Automatic ZIP creation for directory uploads
+- Automatic ZIP creation for iOS Simulator `.app` directories
 - Secure API key authentication
 - Built-in file validation and error handling
 - Simple integration with existing GitHub workflows
@@ -70,7 +70,7 @@ To use this action in your GitHub workflow, add the following step to your `.git
 
 - `.app` - iOS Simulator application builds
 - `.apk` - Android application builds
-- `.zip` - An APK or iOS Simulator `.app` at the archive root; automatically created for directory uploads
+- `.zip` - An APK or iOS Simulator `.app` at the archive root; automatically created for iOS Simulator `.app` directory uploads
 
 An `.aab` filename is rejected before upload, including uppercase extensions. Renaming or wrapping a bundle in a ZIP does not make it a supported build. A ZIP upload is checked asynchronously by Pie; a successful upload response does not mean the build passed verification.
 
@@ -122,7 +122,7 @@ jobs:
           build_path: app/build/outputs/apk/release/app-release.apk
 ```
 
-## Directory Upload Example
+## iOS Simulator Directory Upload Example
 ```yaml
 - name: Upload Build Directory
   uses:pielabsai/upload-build-action@v1.2

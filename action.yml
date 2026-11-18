@@ -36,11 +36,15 @@ runs:
 
         # Handle directory case
         if [ -d "${{ inputs.build_path }}" ]; then
-          echo "Directory detected, creating zip archive..."
-          
-          # Get absolute paths
           abs_build_path=$(realpath "${{ inputs.build_path }}")
           dir_name=$(basename "$abs_build_path")
+          if [[ "$(echo "$dir_name" | tr '[:upper:]' '[:lower:]')" != *.app ]]; then
+            echo "Error: Directory uploads must be iOS Simulator .app bundles. For Android, upload an .apk file."
+            exit 1
+          fi
+          echo "iOS Simulator APP directory detected, creating zip archive..."
+
+          # Get the parent path for packaging.
           parent_dir=$(dirname "$abs_build_path")
           zip_path="$parent_dir/$dir_name.zip"
           

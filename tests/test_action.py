@@ -70,6 +70,19 @@ class UploadActionTests(unittest.TestCase):
                 self.assertFalse(self.requests.exists())
                 self.assertFalse(self.output.exists())
 
+    def test_android_output_directory_rejected_before_packaging_or_upload(self):
+        for extension in ("apk", "aab"):
+            with self.subTest(extension=extension):
+                build = self.root / extension
+                build.mkdir()
+                (build / f"release.{extension}").write_bytes(b"fixture")
+                result = self.run_action(build)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Directory uploads must be iOS Simulator .app bundles", result.stdout)
+                self.assertFalse(build.with_suffix(".zip").exists())
+                self.assertFalse(self.requests.exists())
+                self.assertFalse(self.output.exists())
+
     def test_supported_files_upload(self):
         for name in ("app.apk", "app.APK", "My app.zip", "app.APP"):
             with self.subTest(name=name):
@@ -84,10 +97,12 @@ class UploadActionTests(unittest.TestCase):
         build = self.root / "My App.app"
         build.mkdir()
         (build / "Info.plist").write_text("fixture")
-        result = self.run_action(build)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        with zipfile.ZipFile(self.root / "My App.app.zip") as archive:
-            self.assertIn("My App.app/Info.plist", archive.namelist())
+        for path in (str(build), str(build) + "/."):
+            with self.subTest(path=path):
+                result = self.run_action(path)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                with zipfile.ZipFile(self.root / "My App.app.zip") as archive:
+                    self.assertIn("My App.app/Info.plist", archive.namelist())
 
     def test_api_rejection_does_not_emit_build_id(self):
         build = self.root / "app.zip"
