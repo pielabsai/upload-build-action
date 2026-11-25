@@ -34,6 +34,7 @@ To use this action in your GitHub workflow, add the following step to your `.git
 |-------|-------------|----------|
 | `pie_api_key` | Your Pie API key for authentication. Should be stored as a GitHub secret. | Yes |
 | `build_path` | Path to your iOS Simulator APP, Android APK, or ZIP containing a supported build. APP directories are automatically zipped. | Yes |
+| `auto_run` | Set to `false` to upload the build without starting any automatic run. Defaults to `true`. See [Upload without running tests](#upload-without-running-tests). | No |
 
 ## Outputs
 
@@ -64,6 +65,25 @@ To use this action in your GitHub workflow, add the following step to your `.git
         \"existingTCIDs\": [368930, 488349],
         \"newTCPrompts\": [\"Smoke test the login flow on the new build\"]
       }"
+```
+
+## Upload without running tests
+
+By default Pie tests every build you upload. For a dev build, or a re-upload after re-running CI, set `auto_run` to `false`. Pie still verifies the build and lists it on the Builds page, so you can start a run on it whenever you want.
+
+```yaml
+- name: Upload build to Pie
+  uses: pielabsai/upload-build-action@v1
+  with:
+    pie_api_key: ${{ secrets.PIE_API_KEY }}
+    build_path: app/build/outputs/apk/debug/app-debug.apk
+    auto_run: false
+```
+
+To decide per build, pass an expression. This one runs tests only for builds from `main`:
+
+```yaml
+    auto_run: ${{ github.ref == 'refs/heads/main' }}
 ```
 
 ## Supported File Types

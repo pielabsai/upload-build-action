@@ -9,6 +9,10 @@ inputs:
   build_path:
     description: "Path to an APK, iOS Simulator APP, or ZIP containing a supported build"
     required: true
+  auto_run:
+    description: "Set to 'false' to upload the build without starting any automatic run. Pie still verifies and lists the build, so you can start a run on it later. Defaults to 'true' (Pie runs the build as usual)."
+    required: false
+    default: "true"
 
 outputs:
   build_id:
@@ -98,6 +102,15 @@ runs:
           exit 1
         fi
 
+        # auto_run=false uploads the build without starting an automatic run.
+        # Anything other than true/false stops here, before the upload, so a
+        # typo never silently runs (or skips) tests.
+        auto_run=$(echo "${{ inputs.auto_run }}" | tr '[:upper:]' '[:lower:]' | xargs)
+        if [ -n "$auto_run" ] && [ "$auto_run" != "true" ] && [ "$auto_run" != "false" ]; then
+          echo "Error: auto_run must be 'true' or 'false' (got '${{ inputs.auto_run }}')"
+          exit 1
+        fi
+
         # Upload the build. Write the response body to a temp file and capture
         # the HTTP status separately so we can parse the JSON cleanly without
         # log noise interleaving (the old `curl ... 2>&1` mashed everything
@@ -111,6 +124,10 @@ runs:
           -F "file=@$build_path"
           -o "$response_file"
           -w "%{http_code}")
+        if [ "$auto_run" = "false" ]; then
+          echo "auto_run is false: Pie will not start an automatic run for this build"
+          curl_opts+=(-F "autoRun=false")
+        fi
         if [ "${DEBUG}" = "true" ]; then curl_opts+=(-v); fi
 
         http_code=$(curl "${curl_opts[@]}" https://api.pie.inc/v1/app/builds)

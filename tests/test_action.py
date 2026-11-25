@@ -28,9 +28,11 @@ class UploadActionTests(unittest.TestCase):
         self.bin.mkdir()
         self.requests = self.root / "requests"
         self.output = self.root / "output"
+        self.args = self.root / "args"
         curl = self.bin / "curl"
         curl.write_text("""#!/bin/bash
  echo called >> "$REQUEST_LOG"
+ printf '%s\n' "$*" >> "$ARGS_LOG"
  while [ "$#" -gt 0 ]; do
    if [ "$1" = '-o' ]; then
      shift
@@ -42,10 +44,11 @@ class UploadActionTests(unittest.TestCase):
  """)
         curl.chmod(0o755)
         self.env = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}",
-                        GITHUB_OUTPUT=str(self.output), REQUEST_LOG=str(self.requests), DEBUG="false")
+                        GITHUB_OUTPUT=str(self.output), REQUEST_LOG=str(self.requests), ARGS_LOG=str(self.args), DEBUG="false")
 
-    def run_action(self, build):
-        replacements = {"inputs.build_path": str(build), "inputs.pie_api_key": "fixture-key"}
+    def run_action(self, build, auto_run="true"):
+        replacements = {"inputs.build_path": str(build), "inputs.pie_api_key": "fixture-key",
+                        "inputs.auto_run": auto_run}
         result = None
         for script in action_scripts():
             for expression, value in replacements.items():
@@ -103,6 +106,39 @@ class UploadActionTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 with zipfile.ZipFile(self.root / "My App.app.zip") as archive:
                     self.assertIn("My App.app/Info.plist", archive.namelist())
+
+    def test_auto_run_default_and_true_send_no_opt_out(self):
+        build = self.root / "app.apk"
+        build.write_bytes(b"fixture")
+        # "" is what a workflow passes when its expression resolves to nothing.
+        for value in ("true", "TRUE", " true ", ""):
+            with self.subTest(value=value):
+                result = self.run_action(build, auto_run=value)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(self.args.read_text().splitlines()), 4)
+        self.assertNotIn("autoRun", self.args.read_text())
+
+    def test_auto_run_false_sends_the_opt_out(self):
+        build = self.root / "app.apk"
+        build.write_bytes(b"fixture")
+        for value in ("false", "False", " false "):
+            with self.subTest(value=value):
+                result = self.run_action(build, auto_run=value)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("build_id=fixture-build", self.output.read_text())
+        sent = self.args.read_text().splitlines()
+        self.assertEqual(len(sent), 3)
+        for line in sent:
+            self.assertIn("-F autoRun=false", line)
+
+    def test_invalid_auto_run_stops_before_upload(self):
+        build = self.root / "app.apk"
+        build.write_bytes(b"fixture")
+        result = self.run_action(build, auto_run="nope")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("auto_run must be 'true' or 'false'", result.stdout)
+        self.assertFalse(self.requests.exists())
+        self.assertNotIn("build_id=", self.output.read_text())
 
     def test_api_rejection_does_not_emit_build_id(self):
         build = self.root / "app.zip"
