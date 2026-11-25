@@ -69,7 +69,7 @@ To use this action in your GitHub workflow, add the following step to your `.git
 
 ## Upload without running tests
 
-By default Pie tests every build you upload. For a dev build, or a re-upload after re-running CI, set `auto_run` to `false`. Pie still verifies the build and lists it on the Builds page, so you can start a run on it whenever you want.
+An upload can start a run on its own: when your app has run-on-upload enabled, has a Loop that fires on build upload, or has never run before. For a dev build, or a re-upload after re-running CI, set `auto_run` to `false` and no run starts. Pie still verifies the build and lists it on the Builds page, so you can start a run on it whenever you want.
 
 ```yaml
 - name: Upload build to Pie

@@ -10,7 +10,7 @@ inputs:
     description: "Path to an APK, iOS Simulator APP, or ZIP containing a supported build"
     required: true
   auto_run:
-    description: "Set to 'false' to upload the build without starting any automatic run. Pie still verifies and lists the build, so you can start a run on it later. Defaults to 'true' (Pie runs the build as usual)."
+    description: "Set to 'false' to upload the build without starting any automatic run. Pie still verifies and lists the build, so you can start a run on it later. Defaults to 'true', which changes nothing: Pie starts a run only if the app is set up to run on upload."
     required: false
     default: "true"
 
